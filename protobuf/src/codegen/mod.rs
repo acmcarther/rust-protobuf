@@ -74,17 +74,23 @@ fn write_file_descriptor_data(file: &FileDescriptorProto, w: &mut CodeWriter) {
         "::protobuf::descriptor::FileDescriptorProto",
     );
     w.write_line("");
-    w.def_fn("parse_descriptor_proto() -> ::protobuf::descriptor::FileDescriptorProto", |w| {
-        w.write_line("::protobuf::parse_from_bytes(file_descriptor_proto_data).unwrap()");
-    });
+    w.def_fn(
+        "parse_descriptor_proto() -> ::protobuf::descriptor::FileDescriptorProto",
+        |w| {
+            w.write_line("::protobuf::parse_from_bytes(file_descriptor_proto_data).unwrap()");
+        },
+    );
     w.write_line("");
-    w.pub_fn("file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescriptorProto", |w| {
-        w.unsafe_expr(|w| {
-            w.block("file_descriptor_proto_lazy.get(|| {", "})", |w| {
-                w.write_line("parse_descriptor_proto()");
+    w.pub_fn(
+        "file_descriptor_proto() -> &'static ::protobuf::descriptor::FileDescriptorProto",
+        |w| {
+            w.unsafe_expr(|w| {
+                w.block("file_descriptor_proto_lazy.get(|| {", "})", |w| {
+                    w.write_line("parse_descriptor_proto()");
+                });
             });
-        });
-    });
+        },
+    );
 }
 
 fn gen_file(
@@ -92,10 +98,12 @@ fn gen_file(
     _files_map: &HashMap<&str, &FileDescriptorProto>,
     root_scope: &RootScope,
 ) -> Option<compiler_plugin::GenResult> {
-    let scope = FileScope { file_descriptor: file }.to_scope();
+    let scope = FileScope {
+        file_descriptor: file,
+    }.to_scope();
 
-    if scope.get_messages().is_empty() && scope.get_enums().is_empty() &&
-        file.get_extension().is_empty()
+    if scope.get_messages().is_empty() && scope.get_enums().is_empty()
+        && file.get_extension().is_empty()
     {
         // protoc generates empty file descriptors for directories: skip them
         return None;
@@ -110,9 +118,7 @@ fn gen_file(
 
         w.write_line("");
         w.write_line("use protobuf::Message as Message_imported_for_functions;");
-        w.write_line(
-            "use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;",
-        );
+        w.write_line("use protobuf::ProtobufEnum as ProtobufEnum_imported_for_functions;");
 
         for message in &scope.get_messages() {
             // ignore map entries, because they are not used in map fields
@@ -135,7 +141,7 @@ fn gen_file(
     }
 
     Some(compiler_plugin::GenResult {
-        name: format!("{}.rs", proto_path_to_rust_mod(file.get_name())),
+        name: format!("{}.rs", proto_path_to_output_path(file.get_name())),
         content: v,
     })
 }
@@ -147,7 +153,9 @@ pub fn gen(
     file_descriptors: &[FileDescriptorProto],
     files_to_generate: &[String],
 ) -> Vec<compiler_plugin::GenResult> {
-    let root_scope = RootScope { file_descriptors: file_descriptors };
+    let root_scope = RootScope {
+        file_descriptors: file_descriptors,
+    };
 
     let mut results: Vec<compiler_plugin::GenResult> = Vec::new();
     let files_map: HashMap<&str, &FileDescriptorProto> =

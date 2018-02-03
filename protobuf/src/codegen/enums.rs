@@ -50,8 +50,8 @@ impl<'a> EnumGen<'a> {
         enum_with_scope: &'a EnumWithScope<'a>,
         current_file: &FileDescriptorProto,
     ) -> EnumGen<'a> {
-        let rust_name = if enum_with_scope.get_scope().get_file_descriptor().get_name() ==
-            current_file.get_name()
+        let rust_name = if enum_with_scope.get_scope().get_file_descriptor().get_name()
+            == current_file.get_name()
         {
             // field type is a message or enum declared in the same file
             enum_with_scope.rust_name()
@@ -71,8 +71,8 @@ impl<'a> EnumGen<'a> {
                 .get_scope()
                 .get_file_descriptor()
                 .get_options()
-                .get_optimize_for() ==
-                FileOptions_OptimizeMode::LITE_RUNTIME,
+                .get_optimize_for()
+                == FileOptions_OptimizeMode::LITE_RUNTIME,
         }
     }
 
@@ -138,9 +138,7 @@ impl<'a> EnumGen<'a> {
         if !self.allow_alias() {
             derive.push("Hash");
         } else {
-            w.comment(
-                "Note: you cannot use pattern matching for enums with allow_alias option",
-            );
+            w.comment("Note: you cannot use pattern matching for enums with allow_alias option");
         }
         w.derive(&derive);
         let ref type_name = self.type_name;
@@ -164,12 +162,16 @@ impl<'a> EnumGen<'a> {
     }
 
     fn write_fn_value(&self, w: &mut CodeWriter) {
-        w.def_fn("value(&self) -> i32", |w| if self.allow_alias() {
-            w.match_expr("*self", |w| for value in self.values_all() {
-                w.case_expr(value.rust_name_outer(), format!("{}", value.number()));
-            });
-        } else {
-            w.write_line("*self as i32")
+        w.def_fn("value(&self) -> i32", |w| {
+            if self.allow_alias() {
+                w.match_expr("*self", |w| {
+                    for value in self.values_all() {
+                        w.case_expr(value.rust_name_outer(), format!("{}", value.number()));
+                    }
+                });
+            } else {
+                w.write_line("*self as i32")
+            }
         });
     }
 
@@ -180,16 +182,25 @@ impl<'a> EnumGen<'a> {
 
             w.write_line("");
             let ref type_name = self.type_name;
-            w.def_fn(&format!("from_i32(value: i32) -> ::std::option::Option<{}>", type_name), |w| {
-                w.match_expr("value", |w| {
-                    let values = self.values_unique();
-                    for value in values {
-                        w.write_line(&format!("{} => ::std::option::Option::Some({}),",
-                            value.number(), value.rust_name_outer()));
-                    }
-                    w.write_line(&format!("_ => ::std::option::Option::None"));
-                });
-            });
+            w.def_fn(
+                &format!(
+                    "from_i32(value: i32) -> ::std::option::Option<{}>",
+                    type_name
+                ),
+                |w| {
+                    w.match_expr("value", |w| {
+                        let values = self.values_unique();
+                        for value in values {
+                            w.write_line(&format!(
+                                "{} => ::std::option::Option::Some({}),",
+                                value.number(),
+                                value.rust_name_outer()
+                            ));
+                        }
+                        w.write_line(&format!("_ => ::std::option::Option::None"));
+                    });
+                },
+            );
 
             w.write_line("");
             w.def_fn(&format!("values() -> &'static [Self]"), |w| {
@@ -220,11 +231,7 @@ impl<'a> EnumGen<'a> {
         w.impl_for_block("::protobuf::reflect::ProtobufValue", &self.type_name, |w| {
             w.def_fn(
                 "as_ref(&self) -> ::protobuf::reflect::ProtobufValueRef",
-                |w| {
-                    w.write_line(
-                        "::protobuf::reflect::ProtobufValueRef::Enum(self.descriptor())",
-                    )
-                },
+                |w| w.write_line("::protobuf::reflect::ProtobufValueRef::Enum(self.descriptor())"),
             )
         })
     }

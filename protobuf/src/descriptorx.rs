@@ -35,7 +35,11 @@ pub fn proto_path_to_rust_mod(path: &str) -> String {
             } else {
                 ident_continue(c)
             };
-            if valid { c } else { '_' }
+            if valid {
+                c
+            } else {
+                '_'
+            }
         })
         .collect::<String>();
 
@@ -47,6 +51,15 @@ pub fn proto_path_to_rust_mod(path: &str) -> String {
     name
 }
 
+pub fn proto_path_to_output_path(path: &str) -> String {
+    let without_dir = strx::remove_to(path, '/');
+    let just_dir = strx::remove_suffix(path, without_dir);
+    just_dir.chars()
+        .enumerate()
+        .chain(proto_path_to_rust_mod(path).chars().enumerate())
+        .map(|(_, c)| c) // Drop index -- keep character
+        .collect()
+}
 
 pub struct RootScope<'a> {
     pub file_descriptors: &'a [FileDescriptorProto],
@@ -56,7 +69,11 @@ impl<'a> RootScope<'a> {
     fn packages(&'a self) -> Vec<FileScope<'a>> {
         self.file_descriptors
             .iter()
-            .map(|fd| FileScope { file_descriptor: fd })
+            .map(|fd| {
+                FileScope {
+                    file_descriptor: fd,
+                }
+            })
             .collect()
     }
 
@@ -84,13 +101,13 @@ impl<'a> RootScope<'a> {
             .into_iter()
             .flat_map(|p| {
                 (if p.get_package().is_empty() {
-                     p.find_message_or_enum(fqn1)
-                 } else if fqn1.starts_with(&(p.get_package().to_string() + ".")) {
-                     let remaining = &fqn1[(p.get_package().len() + 1)..];
-                     p.find_message_or_enum(remaining)
-                 } else {
-                     None
-                 }).into_iter()
+                    p.find_message_or_enum(fqn1)
+                } else if fqn1.starts_with(&(p.get_package().to_string() + ".")) {
+                    let remaining = &fqn1[(p.get_package().len() + 1)..];
+                    p.find_message_or_enum(remaining)
+                } else {
+                    None
+                }).into_iter()
             })
             .next()
             .expect(&format!("enum not found by name: {}", fqn))
@@ -148,8 +165,9 @@ impl<'a> FileScope<'a> {
     pub fn find_enums(&self) -> Vec<EnumWithScope<'a>> {
         let mut r = Vec::new();
 
-        self.to_scope()
-            .walk_scopes(|scope| { r.extend(scope.get_enums()); });
+        self.to_scope().walk_scopes(|scope| {
+            r.extend(scope.get_enums());
+        });
 
         r
     }
@@ -158,8 +176,9 @@ impl<'a> FileScope<'a> {
     pub fn find_messages(&self) -> Vec<MessageWithScope<'a>> {
         let mut r = Vec::new();
 
-        self.to_scope()
-            .walk_scopes(|scope| { r.extend(scope.get_messages()); });
+        self.to_scope().walk_scopes(|scope| {
+            r.extend(scope.get_messages());
+        });
 
         r
     }
@@ -168,8 +187,9 @@ impl<'a> FileScope<'a> {
     pub fn find_messages_and_enums(&self) -> Vec<MessageOrEnumWithScope<'a>> {
         let mut r = Vec::new();
 
-        self.to_scope()
-            .walk_scopes(|scope| { r.extend(scope.get_messages_and_enums()); });
+        self.to_scope().walk_scopes(|scope| {
+            r.extend(scope.get_messages_and_enums());
+        });
 
         r
     }
@@ -257,7 +277,7 @@ impl<'a> Scope<'a> {
             .collect()
     }
 
-    fn walk_scopes_impl<F : FnMut(&Scope<'a>)>(&self, callback: &mut F) {
+    fn walk_scopes_impl<F: FnMut(&Scope<'a>)>(&self, callback: &mut F) {
         (*callback)(self);
 
         for nested in self.nested_scopes() {
@@ -268,7 +288,7 @@ impl<'a> Scope<'a> {
     // apply callback for this scope and all nested scopes
     fn walk_scopes<F>(&self, mut callback: F)
     where
-        F : FnMut(&Scope<'a>),
+        F: FnMut(&Scope<'a>),
     {
         self.walk_scopes_impl(&mut callback);
     }
@@ -598,8 +618,9 @@ pub fn find_message_by_rust_name<'a>(
     fd: &'a FileDescriptorProto,
     rust_name: &str,
 ) -> MessageWithScope<'a> {
-    FileScope { file_descriptor: fd }
-        .find_messages()
+    FileScope {
+        file_descriptor: fd,
+    }.find_messages()
         .into_iter()
         .find(|m| m.rust_name() == rust_name)
         .unwrap()
@@ -610,8 +631,9 @@ pub fn find_enum_by_rust_name<'a>(
     fd: &'a FileDescriptorProto,
     rust_name: &str,
 ) -> EnumWithScope<'a> {
-    FileScope { file_descriptor: fd }
-        .find_enums()
+    FileScope {
+        file_descriptor: fd,
+    }.find_enums()
         .into_iter()
         .find(|e| e.rust_name() == rust_name)
         .unwrap()

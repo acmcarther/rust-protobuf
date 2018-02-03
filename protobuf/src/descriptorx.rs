@@ -53,7 +53,7 @@ pub fn proto_path_to_rust_mod(path: &str) -> String {
 
 pub fn proto_path_to_output_path(path: &str) -> String {
     let without_dir = strx::remove_to(path, '/');
-    let just_dir = strx::remove_suffix(path, without_dir);
+    let just_dir = strx::remove_suffix(path, without_dir).unwrap();
     just_dir.chars()
         .enumerate()
         .chain(proto_path_to_rust_mod(path).chars().enumerate())
